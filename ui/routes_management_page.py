@@ -76,7 +76,7 @@ class RoutesManagementPage(QWidget):
         ''')
 
         form_layout = QFormLayout()
-        form_layout.setSpacing(15)
+        form_layout.setSpacing(10)
 
         # Выбор поезда
         self.train_combo = QComboBox()

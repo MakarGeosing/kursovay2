@@ -137,7 +137,7 @@ class RoutesPage(QWidget):
         layout.addWidget(filter_frame)
 
         # Таблица рейсов
-        layout.addSpacing(10)
+        layout.addSpacing(1)
         results_label = QLabel('СПИСОК РЕЙСОВ:')
         results_label.setStyleSheet(f'''
             font-size: {Config.FONT_SIZES["xlarge"]}px;
@@ -147,12 +147,20 @@ class RoutesPage(QWidget):
         layout.addWidget(results_label)
 
         self.routes_table = QTableWidget()
-        self.routes_table.setColumnCount(8)
+        #self.routes_table.setColumnCount(8)
+        #self.routes_table.setHorizontalHeaderLabels(
+        #    ['Поезд', 'Откуда', 'Куда', 'Отправление', 'Прибытие', 'Цена', 'Свободных мест', 'Действия'])
+        self.routes_table.setColumnCount(7)
         self.routes_table.setHorizontalHeaderLabels(
-            ['Поезд', 'Откуда', 'Куда', 'Отправление', 'Прибытие', 'Цена', 'Свободных мест', 'Действия'])
+            ['Поезд', 'Откуда', 'Куда', 'Отправление', 'Прибытие', 'Цена', 'Свободных мест'])
         self.routes_table.horizontalHeader().setStretchLastSection(True)
         self.routes_table.doubleClicked.connect(self.on_route_double_clicked)
         self.routes_table.itemSelectionChanged.connect(self.selection_changed)
+
+        self.routes_table.setMinimumHeight(450)
+
+        # Увеличиваем высоту строк для лучшей читаемости
+        self.routes_table.verticalHeader().setDefaultSectionSize(50)
 
         # Настраиваем ширину колонок
         self.routes_table.setColumnWidth(0, 150)  # Поезд

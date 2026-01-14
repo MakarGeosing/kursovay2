@@ -19,11 +19,11 @@ class BookingConfirmationWindow(QDialog):
 
     def init_ui(self):
         self.setWindowTitle('Подтверждение бронирования')
-        self.setFixedSize(600, 550)
+        self.setFixedSize(800, 800)
 
         layout = QVBoxLayout()
-        layout.setContentsMargins(30, 30, 30, 30)
-        layout.setSpacing(20)
+        layout.setContentsMargins(5, 5, 5, 5)
+        layout.setSpacing(50)
 
         # Заголовок
         title = QLabel('ПОДТВЕРЖДЕНИЕ БРОНИРОВАНИЯ')
