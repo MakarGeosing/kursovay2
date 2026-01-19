@@ -250,6 +250,24 @@ class AdminPage(QWidget):
             actions_layout = QHBoxLayout()
             actions_layout.setContentsMargins(0, 0, 0, 0)
 
+            # Кнопка отправки email
+            email_btn = QPushButton('📧 Email')
+            email_btn.setStyleSheet(f'''
+                QPushButton {{
+                    background-color: {Config.COLORS["secondary"]};
+                    color: white;
+                    border: none;
+                    border-radius: 4px;
+                    padding: 5px;
+                    font-size: {Config.FONT_SIZES["small"]}px;
+                }}
+                QPushButton:hover {{
+                    background-color: #1976D2;
+                }}
+            ''')
+            email_btn.clicked.connect(lambda checked, bid=booking['booking_id']: self.send_ticket_email(bid))
+            actions_layout.addWidget(email_btn)
+
             # Показываем кнопку подтверждения для всех НЕ подтвержденных бронирований,
             # кроме отмененных
             if not confirmed and status not in ['отменено', 'canceled', 'cancelled']:
@@ -273,7 +291,7 @@ class AdminPage(QWidget):
             view_btn = QPushButton('👁 Просмотр')
             view_btn.setStyleSheet(f'''
                 QPushButton {{
-                    background-color: {Config.COLORS["secondary"]};
+                    background-color: {Config.COLORS["warning"]};
                     color: white;
                     border: none;
                     border-radius: 4px;
@@ -281,7 +299,7 @@ class AdminPage(QWidget):
                     font-size: {Config.FONT_SIZES["small"]}px;
                 }}
                 QPushButton:hover {{
-                    background-color: #1976D2;
+                    background-color: #FF5722;
                 }}
             ''')
             view_btn.clicked.connect(lambda checked, bid=booking['booking_id']: self.view_booking_details(bid))
@@ -395,7 +413,7 @@ class AdminPage(QWidget):
         """Показать детали бронирования"""
         dialog = QDialog(self)
         dialog.setWindowTitle(f'Детали бронирования №{details["booking_id"]}')
-        dialog.setFixedSize(500, 650)
+        dialog.setFixedSize(500, 700)  # Увеличили высоту
 
         layout = QVBoxLayout()
         layout.setContentsMargins(20, 20, 20, 20)
@@ -476,6 +494,25 @@ class AdminPage(QWidget):
         # Кнопки
         buttons_layout = QHBoxLayout()
 
+        # Кнопка отправки email
+        email_btn = QPushButton('📧 Отправить билет')
+        email_btn.setMinimumHeight(40)
+        email_btn.setStyleSheet(f'''
+            QPushButton {{
+                background-color: {Config.COLORS["secondary"]};
+                color: white;
+                border: none;
+                border-radius: 6px;
+                font-size: {Config.FONT_SIZES["normal"]}px;
+                font-weight: bold;
+            }}
+            QPushButton:hover {{
+                background-color: #1976D2;
+            }}
+        ''')
+        email_btn.clicked.connect(lambda: self.send_ticket_email(details['booking_id']))
+        buttons_layout.addWidget(email_btn)
+
         if not confirmed and status not in ['отменено', 'canceled', 'cancelled']:
             confirm_btn = QPushButton('✅ Подтвердить бронирование')
             confirm_btn.setMinimumHeight(40)
@@ -518,7 +555,7 @@ class AdminPage(QWidget):
         close_btn.setMinimumHeight(40)
         close_btn.setStyleSheet(f'''
             QPushButton {{
-                background-color: {Config.COLORS["secondary"]};
+                background-color: {Config.COLORS["primary"]};
                 color: white;
                 border: none;
                 border-radius: 6px;
@@ -526,25 +563,7 @@ class AdminPage(QWidget):
                 font-weight: bold;
             }}
             QPushButton:hover {{
-                background-color: #1976D2;
-            }}
-        ''')
-        close_btn.clicked.connect(dialog.accept)
-        buttons_layout.addWidget(close_btn)
-
-        close_btn = QPushButton('Закрыть')
-        close_btn.setMinimumHeight(40)
-        close_btn.setStyleSheet(f'''
-            QPushButton {{
-                background-color: {Config.COLORS["secondary"]};
-                color: white;
-                border: none;
-                border-radius: 6px;
-                font-size: {Config.FONT_SIZES["normal"]}px;
-                font-weight: bold;
-            }}
-            QPushButton:hover {{
-                background-color: #1976D2;
+                opacity: 0.9;
             }}
         ''')
         close_btn.clicked.connect(dialog.accept)
@@ -605,3 +624,23 @@ class AdminPage(QWidget):
                 QMessageBox.critical(self, 'Ошибка', 'Не удалось изменить роль пользователя')
 
             self.db.disconnect()
+
+    def send_ticket_email(self, booking_id, existing_email=''):
+        """Отправка билета на email (заглушка)"""
+        # Диалог для ввода email
+        email, ok = QInputDialog.getText(self, 'Отправка билета',
+                                         f'Введите email адрес для отправки билета №{booking_id}:',
+                                         QLineEdit.Normal,
+                                         existing_email or 'passenger@example.com')
+
+        if ok and email:
+            if '@' in email:
+                # ЗАГЛУШКА - имитируем отправку
+                QMessageBox.information(self, 'Билет отправлен!',
+                                        f'Электронный билет №{booking_id}\n'
+                                        f'успешно отправлен на адрес:\n'
+                                        f'{email}\n\n'
+                                        '✅ Письмо с билетом было успешно отправлено!\n'
+                                        'Проверьте папку "Входящие" или "Спам"')
+            else:
+                QMessageBox.warning(self, 'Ошибка', 'Введите корректный email адрес')

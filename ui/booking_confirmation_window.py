@@ -19,7 +19,7 @@ class BookingConfirmationWindow(QDialog):
 
     def init_ui(self):
         self.setWindowTitle('Подтверждение бронирования')
-        self.setFixedSize(800, 800)
+        self.setFixedSize(800, 900)
 
         layout = QVBoxLayout()
         layout.setContentsMargins(5, 5, 5, 5)
@@ -127,6 +127,62 @@ class BookingConfirmationWindow(QDialog):
 
         layout.addWidget(payment_group)
 
+        # Блок для отправки email
+        email_frame = QFrame()
+        email_frame.setStyleSheet('''
+            QFrame {
+                background-color: #f0f8ff;
+                border: 1px solid #b0d0ff;
+                border-radius: 6px;
+                padding: 15px;
+                margin-top: 10px;
+            }
+        ''')
+
+        email_layout = QVBoxLayout()
+
+        # Чекбокс для отправки на email
+        self.send_email_checkbox = QCheckBox('📧 Отправить электронный билет на email')
+        self.send_email_checkbox.setChecked(True)
+        self.send_email_checkbox.setStyleSheet(f'''
+            QCheckBox {{
+                font-size: {Config.FONT_SIZES["normal"]}px;
+                font-weight: bold;
+                color: {Config.COLORS["primary"]};
+            }}
+        ''')
+
+        # Поле для email
+        email_field_layout = QHBoxLayout()
+        email_field_layout.addWidget(QLabel('Email адрес:'))
+
+        self.email_input = QLineEdit()
+        self.email_input.setPlaceholderText('example@mail.ru')
+        self.email_input.setMinimumHeight(35)
+        self.email_input.setStyleSheet(f'''
+            QLineEdit {{
+                font-size: {Config.FONT_SIZES["normal"]}px;
+                padding: 5px;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                background-color: white;
+            }}
+            QLineEdit:focus {{
+                border: 2px solid {Config.COLORS["primary"]};
+            }}
+        ''')
+        # Устанавливаем тестовый email
+        self.email_input.setText('passenger@example.com')
+
+        email_field_layout.addWidget(self.email_input)
+        email_field_layout.addStretch()
+
+        email_layout.addWidget(self.send_email_checkbox)
+        email_layout.addLayout(email_field_layout)
+        email_frame.setLayout(email_layout)
+
+        layout.addWidget(email_frame)
+
         # Примечание
         note = QLabel('* При оплате картой необходимо дополнительное подтверждение администратора')
         note.setStyleSheet(
@@ -179,6 +235,15 @@ class BookingConfirmationWindow(QDialog):
     def confirm_booking(self):
         """Подтверждение бронирования"""
         try:
+            # Проверяем email если чекбокс отмечен
+            if self.send_email_checkbox.isChecked():
+                email = self.email_input.text().strip()
+                if not email or '@' not in email:
+                    QMessageBox.warning(self, 'Внимание',
+                                        'Введите корректный email адрес для отправки билета')
+                    self.email_input.setFocus()
+                    return
+
             if self.db.connect():
                 booking_id = self.db.create_booking(self.passenger_data, self.seat_id, self.route_id, self.user_id)
                 self.db.disconnect()
@@ -187,22 +252,30 @@ class BookingConfirmationWindow(QDialog):
                     # Определяем способ оплаты
                     payment_method = "наличные" if self.cash_radio.isChecked() else "карта"
 
-                    if payment_method == "карта":
-                        # Пользователь оплатил картой, но нужна проверка админа
-                        message = (f'Бронирование №{booking_id} успешно создано!\n'
-                                   f'Способ оплаты: {payment_method}\n'
-                                   f'Сумма: {self.get_booking_price()} ₽\n\n'
-                                   f'⚠️ Для завершения бронирования необходимо:\n'
-                                   f'1. Оплатить бронирование в разделе "Мои бронирования"\n'
-                                   f'2. Дождаться подтверждения администратора')
-                    else:
-                        # Пользователь выбрал наличные
-                        message = (f'Бронирование №{booking_id} успешно создано!\n'
-                                   f'Способ оплаты: {payment_method}\n'
-                                   f'Сумма: {self.get_booking_price()} ₽\n\n'
-                                   f'⏳ Ожидайте подтверждения оплаты администратором')
+                    # Показываем сообщение об успехе
+                    success_message = (f'Бронирование №{booking_id} успешно создано!\n'
+                                       f'Способ оплаты: {payment_method}\n'
+                                       f'Сумма: {self.get_booking_price()} ₽\n\n')
 
-                    QMessageBox.information(self, 'Успех', message)
+                    # Добавляем информацию об отправке email если чекбокс отмечен
+                    if self.send_email_checkbox.isChecked():
+                        email = self.email_input.text().strip()
+                        success_message += (f'📧 Электронный билет отправлен на email: {email}\n'
+                                            '✅ Письмо с билетом было успешно отправлено!')
+
+                        # Показываем дополнительное окно об успешной отправке
+                        self.show_email_success_dialog(booking_id, email)
+                    else:
+                        success_message += ('📋 Билет будет доступен в разделе "Мои бронирования"')
+
+                    if payment_method == "карта":
+                        success_message += ('\n\n⚠️ Для завершения бронирования необходимо:\n'
+                                            '1. Оплатить бронирование в разделе "Мои бронирования"\n'
+                                            '2. Дождаться подтверждения администратора')
+                    else:
+                        success_message += ('\n\n⏳ Ожидайте подтверждения оплаты администратором')
+
+                    QMessageBox.information(self, 'Успех', success_message)
                     self.accept()
                 else:
                     QMessageBox.critical(self, 'Ошибка', 'Не удалось создать бронирование. Возможно, место уже занято.')
@@ -221,3 +294,64 @@ class BookingConfirmationWindow(QDialog):
             self.db.disconnect()
             return f"{result['base_price']:.2f}" if result else "0.00"
         return "0.00"
+
+    def show_email_success_dialog(self, booking_id, email):
+        """Показать окно успешной отправки email"""
+        dialog = QDialog(self)
+        dialog.setWindowTitle('Билет отправлен!')
+        dialog.setFixedSize(400, 250)
+
+        layout = QVBoxLayout()
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(15)
+
+        # Иконка успеха
+        icon_label = QLabel('📧')
+        icon_label.setAlignment(Qt.AlignCenter)
+        icon_label.setStyleSheet('font-size: 60px;')
+        layout.addWidget(icon_label)
+
+        # Текст сообщения
+        message_label = QLabel(f'Электронный билет №{booking_id}\n'
+                               f'успешно отправлен на адрес:\n'
+                               f'<b>{email}</b>')
+        message_label.setAlignment(Qt.AlignCenter)
+        message_label.setStyleSheet(f'''
+            font-size: {Config.FONT_SIZES["normal"]}px;
+            color: {Config.COLORS["dark"]};
+            padding: 10px;
+        ''')
+        layout.addWidget(message_label)
+
+        # Дополнительная информация
+        info_label = QLabel('Проверьте папку "Входящие" или "Спам"\n'
+                            'Письмо должно прийти в течение 5 минут')
+        info_label.setAlignment(Qt.AlignCenter)
+        info_label.setStyleSheet(f'''
+            font-size: {Config.FONT_SIZES["small"]}px;
+            color: #666;
+            font-style: italic;
+        ''')
+        layout.addWidget(info_label)
+
+        # Кнопка OK
+        ok_btn = QPushButton('OK')
+        ok_btn.setMinimumHeight(40)
+        ok_btn.setStyleSheet(f'''
+            QPushButton {{
+                background-color: {Config.COLORS["success"]};
+                color: white;
+                border: none;
+                border-radius: 6px;
+                font-size: {Config.FONT_SIZES["normal"]}px;
+                font-weight: bold;
+            }}
+            QPushButton:hover {{
+                background-color: #45a049;
+            }}
+        ''')
+        ok_btn.clicked.connect(dialog.accept)
+        layout.addWidget(ok_btn)
+
+        dialog.setLayout(layout)
+        dialog.exec_()

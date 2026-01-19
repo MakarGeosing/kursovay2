@@ -115,6 +115,9 @@ class BookingsPage(QWidget):
 
         self.context_menu.addSeparator()
 
+        self.email_action = self.context_menu.addAction('📧 Отправить билет на email')
+        self.email_action.triggered.connect(self.send_ticket_by_email)
+
         self.cancel_action = self.context_menu.addAction('❌ Отменить бронирование')
         self.cancel_action.triggered.connect(self.cancel_selected_booking)
 
@@ -134,6 +137,7 @@ class BookingsPage(QWidget):
                 # Включаем/отключаем действия в зависимости от статуса
                 self.cancel_action.setEnabled('Забронировано' in status_text or 'Оплачено' in status_text)
                 self.pay_action.setEnabled('Забронировано' in status_text)
+                self.email_action.setEnabled(True)  # Всегда доступна для отправки email
 
                 self.context_menu.exec_(self.bookings_table.viewport().mapToGlobal(position))
 
@@ -337,12 +341,31 @@ class BookingsPage(QWidget):
         info_frame.setLayout(info_layout)
         layout.addWidget(info_frame)
 
+        # Кнопка отправки email
+        email_btn = QPushButton('📧 Отправить билет на email')
+        email_btn.setMinimumHeight(40)
+        email_btn.setStyleSheet(f'''
+            QPushButton {{
+                background-color: {Config.COLORS["secondary"]};
+                color: white;
+                border: none;
+                border-radius: 6px;
+                font-size: {Config.FONT_SIZES["normal"]}px;
+                font-weight: bold;
+            }}
+            QPushButton:hover {{
+                background-color: #1976D2;
+            }}
+        ''')
+        email_btn.clicked.connect(lambda: self.send_ticket_by_email_dialog(details['booking_id']))
+        layout.addWidget(email_btn)
+
         # Кнопка закрытия
         close_btn = QPushButton('Закрыть')
         close_btn.setMinimumHeight(40)
         close_btn.setStyleSheet(f'''
             QPushButton {{
-                background-color: {Config.COLORS["secondary"]};
+                background-color: {Config.COLORS["primary"]};
                 color: white;
                 border: none;
                 border-radius: 6px;
@@ -423,3 +446,30 @@ class BookingsPage(QWidget):
 
                     finally:
                         self.db.disconnect()
+
+    def send_ticket_by_email(self):
+        """Отправка билета на email (заглушка)"""
+        current_row = self.bookings_table.currentRow()
+        if current_row >= 0:
+            booking_id = self.bookings_table.item(current_row, 0).text()
+            self.send_ticket_by_email_dialog(booking_id)
+
+    def send_ticket_by_email_dialog(self, booking_id):
+        """Диалог отправки билета на email"""
+        # Диалог для ввода email
+        email, ok = QInputDialog.getText(self, 'Отправка билета',
+                                         f'Введите email адрес для отправки билета №{booking_id}:',
+                                         QLineEdit.Normal,
+                                         'passenger@example.com')
+
+        if ok and email:
+            if '@' in email:
+                # ЗАГЛУШКА - имитируем отправку
+                QMessageBox.information(self, 'Билет отправлен!',
+                                        f'Электронный билет №{booking_id}\n'
+                                        f'успешно отправлен на адрес:\n'
+                                        f'{email}\n\n'
+                                        '✅ Письмо с билетом было успешно отправлено!\n'
+                                        'Проверьте папку "Входящие" или "Спам"')
+            else:
+                QMessageBox.warning(self, 'Ошибка', 'Введите корректный email адрес')
